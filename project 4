@@ -1,0 +1,462 @@
+
+# ============================================================
+# PROJECT: PERSONAL EXPENSE ANALYTICS
+# Technologies: Python, Pandas, NumPy, Matplotlib, Seaborn
+# ============================================================
+
+# 1. IMPORT LIBRARIES
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 2. CREATE SAMPLE DATASET
+
+np.random.seed(42)
+
+n = 300
+
+categories = [
+    "Food", "Shopping", "Travel", "Rent",
+    "Bills", "Entertainment", "Healthcare", "Education"
+]
+
+payment_methods = [
+    "Cash", "UPI", "Credit Card", "Debit Card"
+]
+
+expense_data = {
+    "Transaction_ID": range(1, n + 1),
+    "Date": pd.date_range(
+        start="2026-01-01",
+        periods=n,
+        freq="D"
+    ),
+    "Category": np.random.choice(categories, n),
+    "Payment_Method": np.random.choice(payment_methods, n),
+    "Expense_Amount": np.random.randint(100, 5000, n),
+    "Description": np.random.choice(
+        ["Personal", "Family", "Work", "Other"], n
+    )
+}
+
+df = pd.DataFrame(expense_data)
+
+# Create monthly income data
+
+income_data = pd.DataFrame({
+    "Month": pd.date_range(
+        start="2026-01-01",
+        periods=10,
+        freq="MS"
+    ).strftime("%B"),
+    "Income": np.random.randint(25000, 50001, 10)
+})
+
+# 3. DATA CLEANING
+
+print("\n========== DATASET INFORMATION ==========")
+
+print(df.head())
+
+print("\nDataset Shape:", df.shape)
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+print("\nDuplicate Records:", df.duplicated().sum())
+
+df.drop_duplicates(inplace=True)
+df.dropna(inplace=True)
+
+# 4. FEATURE ENGINEERING
+
+df["Month"] = df["Date"].dt.strftime("%B")
+
+df["Day"] = df["Date"].dt.day_name()
+
+df["Year"] = df["Date"].dt.year
+
+# 5. OVERALL EXPENSE ANALYSIS
+
+total_expense = df["Expense_Amount"].sum()
+
+average_expense = df["Expense_Amount"].mean()
+
+highest_expense = df["Expense_Amount"].max()
+
+lowest_expense = df["Expense_Amount"].min()
+
+total_transactions = len(df)
+
+print("\n========== OVERALL EXPENSE ANALYSIS ==========")
+
+print("Total Expenses: Rs.", round(total_expense, 2))
+
+print("Average Expense: Rs.", round(average_expense, 2))
+
+print("Highest Expense: Rs.", highest_expense)
+
+print("Lowest Expense: Rs.", lowest_expense)
+
+print("Total Transactions:", total_transactions)
+
+# 6. CATEGORY-WISE EXPENSE ANALYSIS
+
+category_analysis = df.groupby("Category").agg(
+    Total_Expense=("Expense_Amount", "sum"),
+    Average_Expense=("Expense_Amount", "mean"),
+    Total_Transactions=("Transaction_ID", "count")
+)
+
+category_analysis["Percentage"] = (
+    category_analysis["Total_Expense"] /
+    total_expense
+) * 100
+
+category_analysis = category_analysis.round(2)
+
+print("\n========== CATEGORY-WISE ANALYSIS ==========")
+
+print(category_analysis)
+
+highest_category = category_analysis[
+    "Total_Expense"
+].idxmax()
+
+print("\nHighest Spending Category:", highest_category)
+
+# 7. MONTHLY EXPENSE ANALYSIS
+
+monthly_expense = df.groupby("Month").agg(
+    Total_Expense=("Expense_Amount", "sum"),
+    Total_Transactions=("Transaction_ID", "count")
+)
+
+print("\n========== MONTHLY EXPENSE ANALYSIS ==========")
+
+print(monthly_expense)
+
+# 8. PAYMENT METHOD ANALYSIS
+
+payment_analysis = df.groupby("Payment_Method").agg(
+    Total_Expense=("Expense_Amount", "sum"),
+    Total_Transactions=("Transaction_ID", "count")
+)
+
+payment_analysis = payment_analysis.round(2)
+
+print("\n========== PAYMENT METHOD ANALYSIS ==========")
+
+print(payment_analysis)
+
+most_used_payment = payment_analysis[
+    "Total_Transactions"
+].idxmax()
+
+print("\nMost Used Payment Method:", most_used_payment)
+
+# 9. DAILY EXPENSE ANALYSIS
+
+daily_expense = df.groupby("Day")["Expense_Amount"].sum()
+
+print("\n========== DAILY EXPENSE ANALYSIS ==========")
+
+print(daily_expense)
+
+# 10. INCOME AND SAVINGS ANALYSIS
+
+monthly_expense_values = (
+    df.groupby(df["Date"].dt.month)["Expense_Amount"]
+    .sum()
+)
+
+# Match January to October income with expense months
+
+financial_analysis = income_data.copy()
+
+financial_analysis["Expense"] = (
+    monthly_expense_values.reindex(
+        range(1, 11), fill_value=0
+    ).values
+)
+
+financial_analysis["Savings"] = (
+    financial_analysis["Income"] -
+    financial_analysis["Expense"]
+)
+
+financial_analysis["Savings_Rate"] = (
+    financial_analysis["Savings"] /
+    financial_analysis["Income"]
+) * 100
+
+financial_analysis = financial_analysis.round(2)
+
+print("\n========== INCOME AND SAVINGS ANALYSIS ==========")
+
+print(financial_analysis)
+
+total_income = financial_analysis["Income"].sum()
+
+total_savings = financial_analysis["Savings"].sum()
+
+print("\nTotal Income: Rs.", total_income)
+
+print("Total Savings: Rs.", total_savings)
+
+print(
+    "Overall Savings Rate:",
+    round((total_savings / total_income) * 100, 2),
+    "%"
+)
+
+# 11. TOP 10 EXPENSES
+
+top_expenses = df.nlargest(
+    10, "Expense_Amount"
+)[
+    ["Transaction_ID", "Date", "Category",
+     "Payment_Method", "Expense_Amount"]
+]
+
+print("\n========== TOP 10 EXPENSES ==========")
+
+print(top_expenses.to_string(index=False))
+
+# 12. DATA VISUALIZATION
+
+sns.set_theme(style="whitegrid")
+
+fig, axes = plt.subplots(2, 3, figsize=(19, 12))
+
+fig.suptitle(
+    "PERSONAL EXPENSE ANALYTICS DASHBOARD",
+    fontsize=20,
+    fontweight="bold"
+)
+
+# Chart 1: Category-wise Expenses
+
+category_analysis["Total_Expense"].plot(
+    kind="bar",
+    ax=axes[0, 0]
+)
+
+axes[0, 0].set_title("Category-wise Expenses")
+axes[0, 0].set_ylabel("Expense (Rs.)")
+axes[0, 0].tick_params(axis="x", rotation=40)
+
+# Chart 2: Monthly Expenses
+
+monthly_plot = df.groupby(
+    df["Date"].dt.to_period("M")
+)["Expense_Amount"].sum()
+
+axes[0, 1].plot(
+    monthly_plot.index.astype(str),
+    monthly_plot.values,
+    marker="o",
+    linewidth=2
+)
+
+axes[0, 1].set_title("Monthly Expense Trend")
+axes[0, 1].set_xlabel("Month")
+axes[0, 1].set_ylabel("Expense (Rs.)")
+axes[0, 1].tick_params(axis="x", rotation=45)
+
+# Chart 3: Payment Method Distribution
+
+payment_analysis["Total_Expense"].plot(
+    kind="pie",
+    autopct="%1.1f%%",
+    ax=axes[0, 2]
+)
+
+axes[0, 2].set_title("Payment Method Distribution")
+axes[0, 2].set_ylabel("")
+
+# Chart 4: Income vs Expense
+
+axes[1, 0].plot(
+    financial_analysis["Month"],
+    financial_analysis["Income"],
+    marker="o",
+    label="Income"
+)
+
+axes[1, 0].plot(
+    financial_analysis["Month"],
+    financial_analysis["Expense"],
+    marker="o",
+    label="Expense"
+)
+
+axes[1, 0].set_title("Income vs Expense")
+axes[1, 0].set_ylabel("Amount (Rs.)")
+axes[1, 0].tick_params(axis="x", rotation=45)
+axes[1, 0].legend()
+
+# Chart 5: Monthly Savings
+
+axes[1, 1].bar(
+    financial_analysis["Month"],
+    financial_analysis["Savings"]
+)
+
+axes[1, 1].set_title("Monthly Savings")
+axes[1, 1].set_ylabel("Savings (Rs.)")
+axes[1, 1].tick_params(axis="x", rotation=45)
+
+# Chart 6: Expense Distribution by Category
+
+sns.boxplot(
+    data=df,
+    x="Category",
+    y="Expense_Amount",
+    ax=axes[1, 2]
+)
+
+axes[1, 2].set_title("Expense Distribution")
+axes[1, 2].set_ylabel("Expense (Rs.)")
+axes[1, 2].tick_params(axis="x", rotation=45)
+
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+plt.show()
+
+# 13. CATEGORY-WISE EXPENSE PIE CHART
+
+plt.figure(figsize=(9, 7))
+
+plt.pie(
+    category_analysis["Total_Expense"],
+    labels=category_analysis.index,
+    autopct="%1.1f%%",
+    startangle=90
+)
+
+plt.title("Personal Expense Distribution")
+
+plt.show()
+
+# 14. CORRELATION ANALYSIS
+
+correlation = df[
+    ["Expense_Amount", "Date"]
+].copy()
+
+correlation["Date_Number"] = (
+    pd.to_datetime(correlation["Date"]).astype("int64")
+)
+
+correlation = correlation[
+    ["Expense_Amount", "Date_Number"]
+].corr()
+
+print("\n========== CORRELATION ANALYSIS ==========")
+
+print(correlation.round(2))
+
+plt.figure(figsize=(7, 5))
+
+sns.heatmap(
+    correlation,
+    annot=True,
+    cmap="coolwarm",
+    fmt=".2f"
+)
+
+plt.title("Expense Correlation Heatmap")
+
+plt.tight_layout()
+
+plt.show()
+
+# 15. BUSINESS INSIGHTS AND RECOMMENDATIONS
+
+print("\n========== PERSONAL FINANCIAL INSIGHTS ==========")
+
+print(
+    "1. Highest spending category:",
+    highest_category
+)
+
+print(
+    "2. Most used payment method:",
+    most_used_payment
+)
+
+print(
+    "3. Total income: Rs.",
+    total_income
+)
+
+print(
+    "4. Total savings: Rs.",
+    total_savings
+)
+
+print(
+    "5. Total expenses: Rs.",
+    total_expense
+)
+
+if total_savings > 0:
+    print("6. Financial Status: Savings are positive.")
+else:
+    print("6. Financial Status: Expenses exceed income.")
+
+print("\nRECOMMENDATIONS:")
+
+print("1. Set a monthly budget for each category.")
+
+print("2. Reduce unnecessary shopping expenses.")
+
+print("3. Track daily expenses regularly.")
+
+print("4. Maintain an emergency savings fund.")
+
+print("5. Compare monthly income and expenses.")
+
+# 16. EXPORT DATA AND REPORTS TO CSV
+
+df.to_csv(
+    "personal_expense_data.csv",
+    index=False
+)
+
+category_analysis.to_csv(
+    "category_expense_analysis.csv"
+)
+
+monthly_expense.to_csv(
+    "monthly_expense_analysis.csv"
+)
+
+payment_analysis.to_csv(
+    "payment_method_analysis.csv"
+)
+
+financial_analysis.to_csv(
+    "income_savings_analysis.csv",
+    index=False
+)
+
+top_expenses.to_csv(
+    "top_10_expenses.csv",
+    index=False
+)
+
+print("\n========== PROJECT COMPLETED ==========")
+
+print("All expense analysis completed successfully!")
+
+print("All visualizations generated successfully!")
+
+print("All CSV reports exported successfully!")
+
+# ============================================================
+# END OF PERSONAL EXPENSE ANALYTICS PROJECT
+# ============================================================
